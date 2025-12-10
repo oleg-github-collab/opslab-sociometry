@@ -1,3 +1,4 @@
+// State
 const state = {
   me: null,
   questions: null,
@@ -6,42 +7,13 @@ const state = {
   rankings: {},
 };
 
-const selectors = {
-  loginCard: document.getElementById('loginCard'),
-  surveyCard: document.getElementById('surveyCard'),
-  peerCard: document.getElementById('peerCard'),
-  rankingCard: document.getElementById('rankingCard'),
-  actionsCard: document.getElementById('actionsCard'),
-  adminCard: document.getElementById('adminCard'),
-  commonQuestions: document.getElementById('commonQuestions'),
-  peerQuestions: document.getElementById('peerQuestions'),
-  rankingBoards: document.getElementById('rankingBoards'),
-  sessionBadge: document.getElementById('sessionBadge'),
-  meBadge: document.getElementById('meBadge'),
-  loginForm: document.getElementById('loginForm'),
-  loginError: document.getElementById('loginError'),
-  submitBtn: document.getElementById('submitBtn'),
-  logoutBtn: document.getElementById('logoutBtn'),
-  saveStatus: document.getElementById('saveStatus'),
-  exportBtn: document.getElementById('exportBtn'),
-  testDataBtn: document.getElementById('testDataBtn'),
-  resetBtn: document.getElementById('resetBtn'),
-  adminStatus: document.getElementById('adminStatus'),
-  statCompleted: document.getElementById('statCompleted'),
-  statPending: document.getElementById('statPending'),
-  statTotal: document.getElementById('statTotal'),
-  completedList: document.getElementById('completedList'),
-  pendingList: document.getElementById('pendingList'),
-  responsesList: document.getElementById('responsesList'),
-  refreshAdminBtn: document.getElementById('refreshAdminBtn'),
-  adminLogoutBtn: document.getElementById('adminLogoutBtn'),
-};
+// DOM selectors
+const $ = (id) => document.getElementById(id);
 
+// API helper
 async function api(path, options = {}) {
   const res = await fetch(path, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     ...options,
   });
@@ -55,67 +27,80 @@ async function api(path, options = {}) {
   return res.text();
 }
 
+// UI State Management
+function showLogin() {
+  $('loginCard').classList.remove('hidden');
+  ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard', 'adminCard'].forEach(id => $(id).classList.add('hidden'));
+  $('sessionBadge').innerHTML = '<span class="pill">не авторизовано</span>';
+}
+
 async function showLoggedInUI() {
-  selectors.loginCard.classList.add('hidden');
-  selectors.sessionBadge.innerHTML = `<span class="pill">Ви ввійшли як</span> <span class="pill strong">${state.me.name}</span>`;
+  $('loginCard').classList.add('hidden');
+  $('sessionBadge').innerHTML = `<span class="pill">Ви ввійшли як</span> <span class="pill strong">${state.me.name}</span>`;
 
   if (state.me.isAdmin) {
-    selectors.adminCard.classList.remove('hidden');
+    $('adminCard').classList.remove('hidden');
     await loadAdminData();
   } else {
-    ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard'].forEach(id => selectors[id].classList.remove('hidden'));
-    selectors.meBadge.textContent = state.me.name;
+    ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard'].forEach(id => $(id).classList.remove('hidden'));
+    $('meBadge').textContent = state.me.name;
     await loadQuestions();
   }
 }
 
-function showLogin() {
-  selectors.loginCard.classList.remove('hidden');
-  ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard', 'adminCard'].forEach(id => selectors[id].classList.add('hidden'));
-  selectors.sessionBadge.innerHTML = `<span class="pill">не авторизовано</span>`;
-}
-
+// Session Management
 async function fetchSession() {
   try {
     const me = await api('/api/me');
     state.me = me.participant;
-    showLoggedInUI();
-    await loadQuestions();
-  } catch (_) {
+    await showLoggedInUI();
+  } catch {
     showLogin();
   }
 }
 
-selectors.loginForm.addEventListener('submit', async (e) => {
+async function handleLogin(e) {
   e.preventDefault();
-  const form = new FormData(selectors.loginForm);
+  const form = new FormData(e.target);
   const email = form.get('email');
   const code = form.get('code');
-  selectors.loginError.classList.add('hidden');
+  $('loginError').classList.add('hidden');
+
   try {
-    const res = await api('/api/login', { method: 'POST', body: JSON.stringify({ email, code }) });
+    const res = await api('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, code })
+    });
     state.me = res.participant;
     await showLoggedInUI();
   } catch (err) {
-    selectors.loginError.textContent = err.message || 'Помилка входу';
-    selectors.loginError.classList.remove('hidden');
+    $('loginError').textContent = err.message || 'Помилка входу';
+    $('loginError').classList.remove('hidden');
   }
-});
+}
 
-selectors.logoutBtn.addEventListener('click', async () => {
-  await api('/api/logout');
-  state.me = null;
-  state.questions = null;
-  state.answers = {};
-  state.rankings = {};
-  showLogin();
-});
+async function handleLogout() {
+  try {
+    await api('/api/logout');
+    state.me = null;
+    state.questions = null;
+    state.answers = {};
+    state.rankings = {};
+    showLogin();
+  } catch (err) {
+    console.error('Logout error:', err);
+    // Force logout anyway
+    window.location.reload();
+  }
+}
 
+// Questions Loading
 async function loadQuestions() {
   const data = await api('/api/questions');
   state.questions = data;
   state.peers = data.rankableParticipants;
   state.rankings = {};
+
   data.criteria.forEach(c => {
     state.rankings[c] = {
       order: state.peers.map(p => p.code),
@@ -123,16 +108,17 @@ async function loadQuestions() {
       comment: '',
     };
   });
+
   renderCommon(data.common);
   renderPeers(data.peer);
   renderBoards(data.criteria);
 }
 
 function renderCommon(list) {
-  selectors.commonQuestions.innerHTML = '';
+  $('commonQuestions').innerHTML = '';
   list.forEach(q => {
     const el = createQuestion(q);
-    selectors.commonQuestions.appendChild(el);
+    $('commonQuestions').appendChild(el);
   });
 }
 
@@ -146,8 +132,9 @@ function groupByPeer(peerQuestions) {
 }
 
 function renderPeers(peerQuestions) {
-  selectors.peerQuestions.innerHTML = '';
+  $('peerQuestions').innerHTML = '';
   const grouped = groupByPeer(peerQuestions);
+
   Object.keys(grouped).forEach(code => {
     const peer = state.peers.find(p => p.code === code);
     const item = document.createElement('div');
@@ -155,7 +142,7 @@ function renderPeers(peerQuestions) {
 
     const header = document.createElement('div');
     header.className = 'accordion-header';
-    header.innerHTML = `<div><p class="eyebrow">Відгук</p><h3>${peer?.name || code}</h3></div><div class="pill soft">ownership • leadership • business</div>`;
+    header.innerHTML = `<div><p class="eyebrow">Відгук</p><h3>${peer?.name || code}</h3></div><div class="pill soft">collaboration • trust • growth</div>`;
     item.appendChild(header);
 
     const body = document.createElement('div');
@@ -167,13 +154,14 @@ function renderPeers(peerQuestions) {
     item.appendChild(body);
 
     header.addEventListener('click', () => item.classList.toggle('open'));
-    selectors.peerQuestions.appendChild(item);
+    $('peerQuestions').appendChild(item);
   });
 }
 
 function createQuestion(q) {
   const wrap = document.createElement('div');
   wrap.className = 'question';
+
   const label = document.createElement('div');
   label.className = 'title';
   label.innerHTML = `<strong>${q.title}</strong><span class="chip">${q.scope === 'common' ? 'спільне' : 'про колегу'}</span>`;
@@ -185,53 +173,50 @@ function createQuestion(q) {
   wrap.appendChild(desc);
 
   const field = document.createElement('div');
-  switch (q.type) {
-    case 'text': {
-      const textarea = document.createElement('textarea');
-      textarea.placeholder = 'Коротко, але конкретно';
-      textarea.addEventListener('input', (e) => updateAnswer(q.id, e.target.value));
-      field.appendChild(textarea);
-      break;
-    }
-    case 'choice': {
-      const select = document.createElement('select');
-      select.innerHTML = `<option value="">Обрати</option>` + q.choice.map(c => `<option value="${c}">${c}</option>`).join('');
-      select.addEventListener('change', (e) => updateAnswer(q.id, e.target.value));
-      field.appendChild(select);
-      break;
-    }
-    case 'scale': {
-      const rangeWrap = document.createElement('div');
-      rangeWrap.style.display = 'grid';
-      rangeWrap.style.gap = '6px';
-      const range = document.createElement('input');
-      range.type = 'range';
-      range.min = 1;
-      range.max = q.scaleMax || 5;
-      range.value = Math.ceil((q.scaleMax || 5) / 2);
-      const label = document.createElement('div');
-      label.className = 'hint';
-      label.textContent = `Оцінка: ${range.value}/${q.scaleMax || 5}`;
-      range.addEventListener('input', (e) => {
-        label.textContent = `Оцінка: ${e.target.value}/${q.scaleMax || 5}`;
-        updateAnswer(q.id, Number(e.target.value));
-      });
-      rangeWrap.append(range, label);
-      field.appendChild(rangeWrap);
-      updateAnswer(q.id, Number(range.value));
-      break;
-    }
+
+  if (q.type === 'text') {
+    const textarea = document.createElement('textarea');
+    textarea.placeholder = 'Коротко, але конкретно';
+    textarea.addEventListener('input', (e) => state.answers[q.id] = e.target.value);
+    field.appendChild(textarea);
+  } else if (q.type === 'choice') {
+    const select = document.createElement('select');
+    select.innerHTML = `<option value="">Обрати</option>` + q.choice.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.addEventListener('change', (e) => state.answers[q.id] = e.target.value);
+    field.appendChild(select);
+  } else if (q.type === 'scale') {
+    const rangeWrap = document.createElement('div');
+    rangeWrap.style.display = 'grid';
+    rangeWrap.style.gap = '6px';
+
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.min = 1;
+    range.max = q.scaleMax || 10;
+    range.value = Math.ceil((q.scaleMax || 10) / 2);
+
+    const label = document.createElement('div');
+    label.className = 'hint';
+    label.textContent = `Оцінка: ${range.value}/${q.scaleMax || 10}`;
+
+    range.addEventListener('input', (e) => {
+      label.textContent = `Оцінка: ${e.target.value}/${q.scaleMax || 10}`;
+      state.answers[q.id] = Number(e.target.value);
+    });
+
+    rangeWrap.append(range, label);
+    field.appendChild(rangeWrap);
+    state.answers[q.id] = Number(range.value);
   }
+
   wrap.appendChild(field);
   return wrap;
 }
 
-function updateAnswer(id, value) {
-  state.answers[id] = value;
-}
-
+// Ranking Boards
 function renderBoards(criteria) {
-  selectors.rankingBoards.innerHTML = '';
+  $('rankingBoards').innerHTML = '';
+
   criteria.forEach(name => {
     const board = document.createElement('div');
     board.className = 'board';
@@ -240,10 +225,12 @@ function renderBoards(criteria) {
     const list = document.createElement('ul');
     list.className = 'draggable-list';
     list.dataset.criteria = name;
+
     (state.rankings[name].order || []).forEach(code => {
       const li = createDraggable(code);
       list.appendChild(li);
     });
+
     enableDrag(list);
     board.appendChild(list);
 
@@ -254,16 +241,20 @@ function renderBoards(criteria) {
       <input type="number" min="1" max="${state.peers.length + 1}" value="${state.rankings[name].selfRank}" />
       <textarea placeholder="Контекст про своє місце (опціонально)">${state.rankings[name].comment || ''}</textarea>
     `;
+
     const numberInput = selfRank.querySelector('input');
     const commentInput = selfRank.querySelector('textarea');
+
     numberInput.addEventListener('input', (e) => {
       state.rankings[name].selfRank = Number(e.target.value);
     });
+
     commentInput.addEventListener('input', (e) => {
       state.rankings[name].comment = e.target.value;
     });
+
     board.appendChild(selfRank);
-    selectors.rankingBoards.appendChild(board);
+    $('rankingBoards').appendChild(board);
   });
 }
 
@@ -279,17 +270,21 @@ function createDraggable(code) {
 
 function enableDrag(list) {
   let dragged;
+
   list.addEventListener('dragstart', (e) => {
     dragged = e.target;
     dragged.classList.add('dragging');
   });
+
   list.addEventListener('dragend', () => dragged?.classList.remove('dragging'));
+
   list.addEventListener('dragover', (e) => {
     e.preventDefault();
     const target = e.target.closest('.draggable');
     if (!target || target === dragged) return;
+
     const rect = target.getBoundingClientRect();
-    const next = (e.clientY - rect.top) / (rect.height) > 0.5;
+    const next = (e.clientY - rect.top) / rect.height > 0.5;
     list.insertBefore(dragged, next ? target.nextSibling : target);
     syncOrderFromDOM(list);
   });
@@ -301,8 +296,10 @@ function syncOrderFromDOM(list) {
   state.rankings[criteria].order = codes;
 }
 
-selectors.submitBtn.addEventListener('click', async () => {
-  selectors.saveStatus.textContent = 'Збереження...';
+// Submit Response
+async function handleSubmit() {
+  $('saveStatus').textContent = 'Збереження...';
+
   try {
     const payload = {
       answers: Object.entries(state.answers).map(([questionId, value]) => ({ questionId, value })),
@@ -313,17 +310,134 @@ selectors.submitBtn.addEventListener('click', async () => {
         comment: data.comment || '',
       })),
     };
-    await api('/api/response', { method: 'POST', body: JSON.stringify(payload) });
-    selectors.saveStatus.textContent = 'Збережено. Дякуємо за точність! Дані гарантовано збережені.';
-    selectors.saveStatus.style.color = '#5bffb3';
-  } catch (err) {
-    selectors.saveStatus.textContent = 'Помилка: ' + err.message;
-    selectors.saveStatus.style.color = '#ff9b9b';
-  }
-});
 
-selectors.exportBtn?.addEventListener('click', async () => {
-  selectors.adminStatus.textContent = 'Готуємо експорт...';
+    await api('/api/response', { method: 'POST', body: JSON.stringify(payload) });
+    $('saveStatus').textContent = 'Збережено ✓';
+    $('saveStatus').style.color = '#5bffb3';
+  } catch (err) {
+    $('saveStatus').textContent = 'Помилка: ' + err.message;
+    $('saveStatus').style.color = '#ff9b9b';
+  }
+}
+
+// Admin Panel
+async function loadAdminData() {
+  try {
+    const [stats, responses] = await Promise.all([
+      api('/api/admin/stats'),
+      api('/api/admin/responses')
+    ]);
+
+    // Update stats
+    $('statCompleted').textContent = stats.completed;
+    $('statPending').textContent = stats.pending;
+    $('statTotal').textContent = stats.total;
+
+    // Completed list
+    $('completedList').innerHTML = stats.completedList.length > 0
+      ? stats.completedList.map(p => `<div class="participant-item">✅ ${p.name}</div>`).join('')
+      : '<div class="hint">Ніхто ще не заповнив</div>';
+
+    // Pending list
+    $('pendingList').innerHTML = stats.pendingList.length > 0
+      ? stats.pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
+      : '<div class="hint">Всі заповнили!</div>';
+
+    // Responses list
+    $('responsesList').innerHTML = responses.length > 0
+      ? responses.map(r => `
+          <div class="response-item" data-code="${r.participantCode}">
+            <div class="response-header">
+              <strong>${r.participantName}</strong>
+              <span class="chip">${new Date(r.submittedAt).toLocaleString('uk-UA')}</span>
+            </div>
+            <div class="response-meta">
+              ${r.answersCount} відповідей, ${r.rankingsCount} ранжувань
+              ${r.isTestData ? '<span class="badge">ТЕСТ</span>' : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<div class="hint">Немає відповідей</div>';
+
+    // Add click handlers to response items
+    document.querySelectorAll('.response-item').forEach(item => {
+      item.style.cursor = 'pointer';
+      item.addEventListener('click', () => {
+        const code = item.dataset.code;
+        viewResponseDetail(code);
+      });
+    });
+  } catch (err) {
+    console.error('Failed to load admin data:', err);
+  }
+}
+
+async function viewResponseDetail(code) {
+  try {
+    const detail = await api(`/api/admin/response/${code}`);
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>${detail.participantName}</h2>
+          <button class="btn-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="hint">${detail.participantEmail || ''} • ${new Date(detail.submittedAt).toLocaleString('uk-UA')} ${detail.isTestData ? '• ТЕСТ' : ''}</p>
+
+          <h3>Відповіді (${detail.answers.length})</h3>
+          <div class="answers-list">
+            ${detail.answers.map(a => `
+              <div class="answer-item">
+                <div class="answer-question">${a.questionId}</div>
+                <div class="answer-value">${typeof a.value === 'object' ? JSON.stringify(a.value) : a.value}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <h3>Ранжування (${detail.rankings.length})</h3>
+          <div class="rankings-list">
+            ${detail.rankings.map(r => `
+              <div class="ranking-item">
+                <strong>${r.criteria}</strong>
+                <div>Порядок: ${r.order.join(', ')}</div>
+                <div>Себе на місці: ${r.selfRank}</div>
+                ${r.comment ? `<div class="hint">${r.comment}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close handlers
+    const closeModal = () => modal.remove();
+    modal.querySelector('.btn-close').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    modal.querySelector('.modal-content').addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  } catch (err) {
+    alert('Помилка завантаження деталей: ' + err.message);
+  }
+}
+
+async function handleRefreshAdmin() {
+  $('adminStatus').textContent = 'Оновлення...';
+  await loadAdminData();
+  $('adminStatus').textContent = 'Дані оновлено ✓';
+  setTimeout(() => $('adminStatus').textContent = '', 2000);
+}
+
+async function handleExport() {
+  $('adminStatus').textContent = 'Готуємо експорт...';
+
   try {
     const data = await api('/api/admin/export');
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -333,147 +447,58 @@ selectors.exportBtn?.addEventListener('click', async () => {
     a.download = `opslab-survey-export-${new Date().toISOString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    selectors.adminStatus.textContent = 'JSON експортовано ✓';
-    setTimeout(() => selectors.adminStatus.textContent = '', 3000);
+    $('adminStatus').textContent = 'JSON експортовано ✓';
+    setTimeout(() => $('adminStatus').textContent = '', 3000);
   } catch (err) {
-    selectors.adminStatus.textContent = 'Не вдалося експортувати: ' + err.message;
+    $('adminStatus').textContent = 'Помилка: ' + err.message;
   }
-});
+}
 
-selectors.testDataBtn?.addEventListener('click', async () => {
-  selectors.adminStatus.textContent = 'Записуємо тестові дані...';
+async function handleTestData() {
+  $('adminStatus').textContent = 'Записуємо тестові дані...';
+
   try {
     await api('/api/admin/run-test', { method: 'POST' });
-    selectors.adminStatus.textContent = 'Тестові дані завантажені ✓';
+    $('adminStatus').textContent = 'Тестові дані завантажені ✓';
     await loadAdminData();
   } catch (err) {
-    selectors.adminStatus.textContent = 'Помилка: ' + err.message;
+    $('adminStatus').textContent = 'Помилка: ' + err.message;
   }
-});
+}
 
-selectors.resetBtn?.addEventListener('click', async () => {
+async function handleReset() {
   if (!confirm('Ви впевнені? Це видалить ВСІ відповіді безповоротно!')) return;
-  selectors.adminStatus.textContent = 'Очищення...';
+
+  $('adminStatus').textContent = 'Очищення...';
+
   try {
     await api('/api/admin/reset', { method: 'POST' });
-    selectors.adminStatus.textContent = 'База очищена ✓';
+    $('adminStatus').textContent = 'База очищена ✓';
     await loadAdminData();
-    setTimeout(() => selectors.adminStatus.textContent = '', 3000);
+    setTimeout(() => $('adminStatus').textContent = '', 3000);
   } catch (err) {
-    selectors.adminStatus.textContent = 'Не вийшло очистити: ' + err.message;
-  }
-});
-
-async function loadAdminData() {
-  try {
-    const [stats, responses] = await Promise.all([
-      api('/api/admin/stats'),
-      api('/api/admin/responses')
-    ]);
-
-    // Update stats
-    selectors.statCompleted.textContent = stats.completed;
-    selectors.statPending.textContent = stats.pending;
-    selectors.statTotal.textContent = stats.total;
-
-    // Completed list
-    selectors.completedList.innerHTML = stats.completedList.length > 0
-      ? stats.completedList.map(p => `<div class="participant-item">✅ ${p.name}</div>`).join('')
-      : '<div class="hint">Ніхто ще не заповнив</div>';
-
-    // Pending list
-    selectors.pendingList.innerHTML = stats.pendingList.length > 0
-      ? stats.pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
-      : '<div class="hint">Всі заповнили!</div>';
-
-    // Responses list with view details button
-    selectors.responsesList.innerHTML = responses.length > 0
-      ? responses.map(r => `
-          <div class="response-item">
-            <div class="response-header">
-              <strong>${r.participantName}</strong>
-              <span class="chip">${new Date(r.submittedAt).toLocaleString('uk-UA')}</span>
-            </div>
-            <div class="response-meta">
-              ${r.answersCount} відповідей, ${r.rankingsCount} ранжувань
-              ${r.isTestData ? '<span class="badge">ТЕСТ</span>' : ''}
-              <button class="btn-link" onclick="viewResponseDetail('${r.participantCode}')">👁 Переглянути</button>
-            </div>
-          </div>
-        `).join('')
-      : '<div class="hint">Немає відповідей</div>';
-  } catch (err) {
-    console.error('Failed to load admin data:', err);
+    $('adminStatus').textContent = 'Помилка: ' + err.message;
   }
 }
 
-window.viewResponseDetail = async function(code) {
-  try {
-    const detail = await api(`/api/admin/response/${code}`);
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Login
+  $('loginForm')?.addEventListener('submit', handleLogin);
 
-    let detailHTML = `
-      <div class="modal-overlay" onclick="window.closeModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-          <div class="modal-header">
-            <h2>${detail.participantName}</h2>
-            <button class="btn-close" onclick="window.closeModal()">✕</button>
-          </div>
-          <div class="modal-body">
-            <p class="hint">${detail.participantEmail || ''} • ${new Date(detail.submittedAt).toLocaleString('uk-UA')} ${detail.isTestData ? '• ТЕСТ' : ''}</p>
+  // Logout
+  $('logoutBtn')?.addEventListener('click', handleLogout);
+  $('adminLogoutBtn')?.addEventListener('click', handleLogout);
 
-            <h3>Відповіді (${detail.answers.length})</h3>
-            <div class="answers-list">
-              ${detail.answers.map(a => `
-                <div class="answer-item">
-                  <div class="answer-question">${a.questionId}</div>
-                  <div class="answer-value">${formatAnswerValue(a.value)}</div>
-                </div>
-              `).join('')}
-            </div>
+  // Submit response
+  $('submitBtn')?.addEventListener('click', handleSubmit);
 
-            <h3>Ранжування (${detail.rankings.length})</h3>
-            <div class="rankings-list">
-              ${detail.rankings.map(r => `
-                <div class="ranking-item">
-                  <strong>${r.criteria}</strong>
-                  <div>Порядок: ${r.order.join(', ')}</div>
-                  <div>Себе на місці: ${r.selfRank}</div>
-                  ${r.comment ? `<div class="hint">${r.comment}</div>` : ''}
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+  // Admin actions
+  $('refreshAdminBtn')?.addEventListener('click', handleRefreshAdmin);
+  $('exportBtn')?.addEventListener('click', handleExport);
+  $('testDataBtn')?.addEventListener('click', handleTestData);
+  $('resetBtn')?.addEventListener('click', handleReset);
 
-    document.body.insertAdjacentHTML('beforeend', detailHTML);
-  } catch (err) {
-    alert('Помилка завантаження деталей: ' + err.message);
-  }
-}
-
-function formatAnswerValue(value) {
-  if (typeof value === 'object') return JSON.stringify(value);
-  return value;
-}
-
-window.closeModal = function() {
-  const modal = document.querySelector('.modal-overlay');
-  if (modal) modal.remove();
-}
-
-// Admin buttons
-selectors.refreshAdminBtn?.addEventListener('click', async () => {
-  selectors.adminStatus.textContent = 'Оновлення...';
-  await loadAdminData();
-  selectors.adminStatus.textContent = 'Дані оновлено ✓';
-  setTimeout(() => selectors.adminStatus.textContent = '', 2000);
+  // Initialize session
+  fetchSession();
 });
-
-selectors.adminLogoutBtn?.addEventListener('click', async () => {
-  await api('/api/logout');
-  window.location.reload();
-});
-
-fetchSession();
