@@ -45,7 +45,7 @@
             <input type="text" name="code" placeholder="----" required />
           </label>
           <button type="submit" class="btn primary">Увійти</button>
-          <p class="hint">Доступ тільки за заданими емейлами та кодами. Адмін: work.olegkaminskyi@gmail.com / 0000.</p>
+          <p class="hint">Доступ тільки за заданими емейлами та персональними кодами.</p>
           <div id="loginError" class="error hidden"></div>
         </form>
       </section>
@@ -101,15 +101,45 @@
         <div class="card-head">
           <div>
             <p class="eyebrow">Адмін-панель</p>
-            <h2>Експорт / тест / старт продакшн</h2>
+            <h2>Статистика та управління</h2>
           </div>
-          <div class="pill strong">Для work.olegkaminskyi@gmail.com</div>
+          <div class="pill strong">Адміністратор</div>
         </div>
+
+        <div class="admin-stats" id="adminStats">
+          <div class="stat-card">
+            <div class="stat-value" id="statCompleted">—</div>
+            <div class="stat-label">Заповнили</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statPending">—</div>
+            <div class="stat-label">Очікують</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-label">Всього</div>
+          </div>
+        </div>
+
+        <div class="admin-section">
+          <h3>Хто заповнив</h3>
+          <div id="completedList" class="participant-list"></div>
+        </div>
+
+        <div class="admin-section">
+          <h3>Хто ще не заповнив</h3>
+          <div id="pendingList" class="participant-list"></div>
+        </div>
+
+        <div class="admin-section">
+          <h3>Відповіді</h3>
+          <div id="responsesList" class="responses-list"></div>
+        </div>
+
         <div class="admin-actions">
-          <button class="btn ghost" id="exportBtn">Експорт JSON</button>
-          <button class="btn ghost" id="testDataBtn">Заповнити тестовими</button>
-          <button class="btn danger" id="resetBtn">Очистити й запустити продакшн</button>
-          <div class="hint">Після перевірки тестового заповнення натисніть «Очистити». Дані миттєво готові до аналізу.</div>
+          <button class="btn ghost" id="exportBtn">📥 Експорт JSON</button>
+          <button class="btn ghost" id="testDataBtn">🧪 Заповнити тестовими</button>
+          <button class="btn danger" id="resetBtn">🗑️ Очистити базу</button>
           <div id="adminStatus" class="hint"></div>
         </div>
       </section>

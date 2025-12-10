@@ -27,6 +27,12 @@ const selectors = {
   testDataBtn: document.getElementById('testDataBtn'),
   resetBtn: document.getElementById('resetBtn'),
   adminStatus: document.getElementById('adminStatus'),
+  statCompleted: document.getElementById('statCompleted'),
+  statPending: document.getElementById('statPending'),
+  statTotal: document.getElementById('statTotal'),
+  completedList: document.getElementById('completedList'),
+  pendingList: document.getElementById('pendingList'),
+  responsesList: document.getElementById('responsesList'),
 };
 
 async function api(path, options = {}) {
@@ -47,13 +53,16 @@ async function api(path, options = {}) {
   return res.text();
 }
 
-function showLoggedInUI() {
+async function showLoggedInUI() {
   selectors.loginCard.classList.add('hidden');
-  ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard'].forEach(id => selectors[id].classList.remove('hidden'));
   selectors.sessionBadge.innerHTML = `<span class="pill">Ви ввійшли як</span> <span class="pill strong">${state.me.name}</span>`;
-  selectors.meBadge.textContent = state.me.name;
+
   if (state.me.isAdmin) {
     selectors.adminCard.classList.remove('hidden');
+    await loadAdminData();
+  } else {
+    ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard'].forEach(id => selectors[id].classList.remove('hidden'));
+    selectors.meBadge.textContent = state.me.name;
   }
 }
 
@@ -339,13 +348,57 @@ selectors.testDataBtn?.addEventListener('click', async () => {
 });
 
 selectors.resetBtn?.addEventListener('click', async () => {
+  if (!confirm('Ви впевнені? Це видалить ВСІ відповіді безповоротно!')) return;
   selectors.adminStatus.textContent = 'Очищення...';
   try {
     await api('/api/admin/reset', { method: 'POST' });
     selectors.adminStatus.textContent = 'База очищена. Продакшн готовий до живих відповідей.';
+    await loadAdminData();
   } catch (err) {
     selectors.adminStatus.textContent = 'Не вийшло очистити: ' + err.message;
   }
 });
+
+async function loadAdminData() {
+  try {
+    const [stats, responses] = await Promise.all([
+      api('/api/admin/stats'),
+      api('/api/admin/responses')
+    ]);
+
+    // Update stats
+    selectors.statCompleted.textContent = stats.completed;
+    selectors.statPending.textContent = stats.pending;
+    selectors.statTotal.textContent = stats.total;
+
+    // Completed list
+    selectors.completedList.innerHTML = stats.completedList.length > 0
+      ? stats.completedList.map(p => `<div class="participant-item">✅ ${p.name}</div>`).join('')
+      : '<div class="hint">Ніхто ще не заповнив</div>';
+
+    // Pending list
+    selectors.pendingList.innerHTML = stats.pendingList.length > 0
+      ? stats.pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
+      : '<div class="hint">Всі заповнили!</div>';
+
+    // Responses list
+    selectors.responsesList.innerHTML = responses.length > 0
+      ? responses.map(r => `
+          <div class="response-item">
+            <div class="response-header">
+              <strong>${r.participantName}</strong>
+              <span class="chip">${new Date(r.submittedAt).toLocaleString('uk-UA')}</span>
+            </div>
+            <div class="response-meta">
+              ${r.answersCount} відповідей, ${r.rankingsCount} ранжувань
+              ${r.isTestData ? '<span class="badge">ТЕСТ</span>' : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<div class="hint">Немає відповідей</div>';
+  } catch (err) {
+    console.error('Failed to load admin data:', err);
+  }
+}
 
 fetchSession();

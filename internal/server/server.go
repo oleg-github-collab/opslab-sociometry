@@ -65,6 +65,8 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("/api/response", s.authenticated(s.handleResponse))
 
 	// Admin
+	mux.Handle("/api/admin/stats", s.adminOnly(s.handleStats))
+	mux.Handle("/api/admin/responses", s.adminOnly(s.handleAdminResponses))
 	mux.Handle("/api/admin/export", s.adminOnly(s.handleExport))
 	mux.Handle("/api/admin/run-test", s.adminOnly(s.handleRunTestData))
 	mux.Handle("/api/admin/reset", s.adminOnly(s.handleReset))
@@ -226,6 +228,83 @@ func (s *Server) validateRankings(selfCode string, rankings []models.RankingPayl
 		}
 	}
 	return nil
+}
+
+func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	responses, err := s.store.AllResponses(r.Context())
+	if err != nil {
+		log.Println("stats:", err)
+		http.Error(w, "cannot load stats", http.StatusInternalServerError)
+		return
+	}
+
+	// Count responses excluding admin
+	respondedCodes := make(map[string]bool)
+	for _, resp := range responses {
+		respondedCodes[resp.ParticipantCode] = true
+	}
+
+	var nonAdminParticipants []models.Participant
+	for _, p := range s.participants {
+		if !p.IsAdmin {
+			nonAdminParticipants = append(nonAdminParticipants, p)
+		}
+	}
+
+	var completedList []map[string]interface{}
+	var pendingList []map[string]interface{}
+
+	for _, p := range nonAdminParticipants {
+		info := map[string]interface{}{
+			"code": p.Code,
+			"name": p.Name,
+			"email": p.Email,
+		}
+		if respondedCodes[p.Code] {
+			completedList = append(completedList, info)
+		} else {
+			pendingList = append(pendingList, info)
+		}
+	}
+
+	payload := map[string]interface{}{
+		"total":     len(nonAdminParticipants),
+		"completed": len(completedList),
+		"pending":   len(pendingList),
+		"completedList": completedList,
+		"pendingList":   pendingList,
+	}
+	writeJSON(w, payload)
+}
+
+func (s *Server) handleAdminResponses(w http.ResponseWriter, r *http.Request) {
+	responses, err := s.store.AllResponses(r.Context())
+	if err != nil {
+		log.Println("admin responses:", err)
+		http.Error(w, "cannot load responses", http.StatusInternalServerError)
+		return
+	}
+
+	// Enrich with participant names
+	var enriched []map[string]interface{}
+	for _, resp := range responses {
+		p, ok := s.participantBy[resp.ParticipantCode]
+		item := map[string]interface{}{
+			"id":              resp.ID,
+			"participantCode": resp.ParticipantCode,
+			"participantName": "Unknown",
+			"submittedAt":     resp.SubmittedAt,
+			"answersCount":    len(resp.Answers),
+			"rankingsCount":   len(resp.Rankings),
+			"isTestData":      resp.IsTestData,
+		}
+		if ok {
+			item["participantName"] = p.Name
+		}
+		enriched = append(enriched, item)
+	}
+
+	writeJSON(w, enriched)
 }
 
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
