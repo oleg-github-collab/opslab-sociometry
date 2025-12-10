@@ -358,15 +358,6 @@ async function loadAdminData() {
           </div>
         `).join('')
       : '<div class="hint">Немає відповідей</div>';
-
-    // Add click handlers to response items
-    document.querySelectorAll('.response-item').forEach(item => {
-      item.style.cursor = 'pointer';
-      item.addEventListener('click', () => {
-        const code = item.dataset.code;
-        viewResponseDetail(code);
-      });
-    });
   } catch (err) {
     console.error('Failed to load admin data:', err);
   }
@@ -498,6 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('exportBtn')?.addEventListener('click', handleExport);
   $('testDataBtn')?.addEventListener('click', handleTestData);
   $('resetBtn')?.addEventListener('click', handleReset);
+
+  // Response items click delegation
+  $('responsesList')?.addEventListener('click', (e) => {
+    const item = e.target.closest('.response-item');
+    if (item && item.dataset.code) {
+      viewResponseDetail(item.dataset.code);
+    }
+  });
 
   // Initialize session
   fetchSession();
