@@ -65,6 +65,7 @@ async function showLoggedInUI() {
   } else {
     ['surveyCard', 'peerCard', 'rankingCard', 'actionsCard'].forEach(id => selectors[id].classList.remove('hidden'));
     selectors.meBadge.textContent = state.me.name;
+    await loadQuestions();
   }
 }
 
@@ -94,8 +95,7 @@ selectors.loginForm.addEventListener('submit', async (e) => {
   try {
     const res = await api('/api/login', { method: 'POST', body: JSON.stringify({ email, code }) });
     state.me = res.participant;
-    showLoggedInUI();
-    await loadQuestions();
+    await showLoggedInUI();
   } catch (err) {
     selectors.loginError.textContent = err.message || 'Помилка входу';
     selectors.loginError.classList.remove('hidden');
@@ -333,7 +333,8 @@ selectors.exportBtn?.addEventListener('click', async () => {
     a.download = `opslab-survey-export-${new Date().toISOString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    selectors.adminStatus.textContent = 'JSON експортовано (дивись файл завантажень).';
+    selectors.adminStatus.textContent = 'JSON експортовано ✓';
+    setTimeout(() => selectors.adminStatus.textContent = '', 3000);
   } catch (err) {
     selectors.adminStatus.textContent = 'Не вдалося експортувати: ' + err.message;
   }
@@ -343,7 +344,8 @@ selectors.testDataBtn?.addEventListener('click', async () => {
   selectors.adminStatus.textContent = 'Записуємо тестові дані...';
   try {
     await api('/api/admin/run-test', { method: 'POST' });
-    selectors.adminStatus.textContent = 'Тестові дані завантажені. Перевірте в експорті, далі натисніть «Очистити».';
+    selectors.adminStatus.textContent = 'Тестові дані завантажені ✓';
+    await loadAdminData();
   } catch (err) {
     selectors.adminStatus.textContent = 'Помилка: ' + err.message;
   }
@@ -354,8 +356,9 @@ selectors.resetBtn?.addEventListener('click', async () => {
   selectors.adminStatus.textContent = 'Очищення...';
   try {
     await api('/api/admin/reset', { method: 'POST' });
-    selectors.adminStatus.textContent = 'База очищена. Продакшн готовий до живих відповідей.';
+    selectors.adminStatus.textContent = 'База очищена ✓';
     await loadAdminData();
+    setTimeout(() => selectors.adminStatus.textContent = '', 3000);
   } catch (err) {
     selectors.adminStatus.textContent = 'Не вийшло очистити: ' + err.message;
   }
@@ -404,16 +407,16 @@ async function loadAdminData() {
   }
 }
 
-async function viewResponseDetail(code) {
+window.viewResponseDetail = async function(code) {
   try {
     const detail = await api(`/api/admin/response/${code}`);
 
     let detailHTML = `
-      <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal-overlay" onclick="window.closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
           <div class="modal-header">
             <h2>${detail.participantName}</h2>
-            <button class="btn-close" onclick="closeModal()">✕</button>
+            <button class="btn-close" onclick="window.closeModal()">✕</button>
           </div>
           <div class="modal-body">
             <p class="hint">${detail.participantEmail || ''} • ${new Date(detail.submittedAt).toLocaleString('uk-UA')} ${detail.isTestData ? '• ТЕСТ' : ''}</p>
@@ -455,7 +458,7 @@ function formatAnswerValue(value) {
   return value;
 }
 
-function closeModal() {
+window.closeModal = function() {
   const modal = document.querySelector('.modal-overlay');
   if (modal) modal.remove();
 }
