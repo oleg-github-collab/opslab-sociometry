@@ -331,23 +331,26 @@ async function loadAdminData() {
     console.log('Admin data loaded:', { stats, responses });
 
     // Update stats
-    $('statCompleted').textContent = stats.completed;
-    $('statPending').textContent = stats.pending;
-    $('statTotal').textContent = stats.total;
+    $('statCompleted').textContent = stats?.completed ?? 0;
+    $('statPending').textContent = stats?.pending ?? 0;
+    $('statTotal').textContent = stats?.total ?? 0;
 
     // Completed list
-    $('completedList').innerHTML = stats.completedList.length > 0
-      ? stats.completedList.map(p => `<div class="participant-item">✅ ${p.name}</div>`).join('')
+    const completedList = stats?.completedList || [];
+    $('completedList').innerHTML = completedList.length > 0
+      ? completedList.map(p => `<div class="participant-item">✅ ${p.name}</div>`).join('')
       : '<div class="hint">Ніхто ще не заповнив</div>';
 
     // Pending list
-    $('pendingList').innerHTML = stats.pendingList.length > 0
-      ? stats.pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
+    const pendingList = stats?.pendingList || [];
+    $('pendingList').innerHTML = pendingList.length > 0
+      ? pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
       : '<div class="hint">Всі заповнили!</div>';
 
     // Responses list
-    $('responsesList').innerHTML = responses.length > 0
-      ? responses.map(r => `
+    const responsesList = responses || [];
+    $('responsesList').innerHTML = responsesList.length > 0
+      ? responsesList.map(r => `
           <div class="response-item" data-code="${r.participantCode}">
             <div class="response-header">
               <strong>${r.participantName}</strong>
@@ -361,7 +364,7 @@ async function loadAdminData() {
         `).join('')
       : '<div class="hint">Немає відповідей. Натисніть "🧪 Заповнити тестовими" щоб створити дані для перегляду.</div>';
 
-    console.log('Responses rendered:', responses.length);
+    console.log('Responses rendered:', responsesList.length);
   } catch (err) {
     console.error('Failed to load admin data:', err);
     $('responsesList').innerHTML = '<div class="hint error">❌ Помилка завантаження даних</div>';

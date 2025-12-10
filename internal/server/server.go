@@ -252,8 +252,8 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var completedList []map[string]interface{}
-	var pendingList []map[string]interface{}
+	completedList := []map[string]interface{}{}
+	pendingList := []map[string]interface{}{}
 
 	for _, p := range nonAdminParticipants {
 		info := map[string]interface{}{
@@ -269,9 +269,9 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := map[string]interface{}{
-		"total":     len(nonAdminParticipants),
-		"completed": len(completedList),
-		"pending":   len(pendingList),
+		"total":         len(nonAdminParticipants),
+		"completed":     len(completedList),
+		"pending":       len(pendingList),
 		"completedList": completedList,
 		"pendingList":   pendingList,
 	}
@@ -287,7 +287,7 @@ func (s *Server) handleAdminResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enrich with participant names
-	var enriched []map[string]interface{}
+	enriched := []map[string]interface{}{}
 	for _, resp := range responses {
 		p, ok := s.participantBy[resp.ParticipantCode]
 		item := map[string]interface{}{
