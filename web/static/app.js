@@ -259,67 +259,46 @@ function createQuestion(q) {
   return wrap;
 }
 
-// Ranking Boards
+// Ranking Boards - Grid-based "Морський бій" style
 function renderBoards(criteria) {
   $('rankingBoards').innerHTML = '';
 
   criteria.forEach(name => {
     const board = document.createElement('div');
     board.className = 'board';
-    board.innerHTML = `<h4>${name}</h4><p class="board-instruction">✋ <strong>Крок 1:</strong> Перетягніть карточки у порядку від найсильнішого до найслабшого</p>`;
 
-    const list = document.createElement('ul');
-    list.className = 'draggable-list';
-    list.dataset.criteria = name;
+    // Header
+    const header = document.createElement('h4');
+    header.textContent = name;
+    board.appendChild(header);
 
-    (state.rankings[name].order || []).forEach(code => {
-      const li = createDraggable(code);
-      list.appendChild(li);
-    });
+    // Instruction for MY ranking
+    const instr1 = document.createElement('p');
+    instr1.className = 'board-instruction';
+    instr1.innerHTML = `<strong>📊 Крок 1:</strong> Проранжуйте колег (натисніть на клітинку). Один колега = одне місце.`;
+    board.appendChild(instr1);
 
-    enableDrag(list);
-    board.appendChild(list);
+    // Grid 1: My ranking of colleagues
+    const grid1 = createRankingGrid(name, state.peers, 'my-ranking');
+    board.appendChild(grid1);
 
-    // Peer Rankings Section
-    const peerRankSection = document.createElement('div');
-    peerRankSection.className = 'peer-rankings';
-    peerRankSection.innerHTML = `<p class="board-instruction">👤 <strong>Крок 2:</strong> Вкажіть, на яке місце <u>кожен колега поставив би вас</u> (за вашою думкою):</p>`;
+    // Instruction for PEER ranking of me
+    const instr2 = document.createElement('p');
+    instr2.className = 'board-instruction';
+    instr2.style.marginTop = '24px';
+    instr2.innerHTML = `<strong>👥 Крок 2:</strong> Де кожен колега поставить <u>МЕНЕ</u>? (можна багато виборів на одне місце)`;
+    board.appendChild(instr2);
 
-    state.peers.forEach(peer => {
-      const peerRankField = document.createElement('div');
-      peerRankField.className = 'peer-rank-field';
-      const currentValue = state.rankings[name].peerRankings?.[peer.code];
-      peerRankField.innerHTML = `
-        <label>${peer.name}</label>
-        <select data-peer="${peer.code}">
-          <option value="">Оберіть місце...</option>
-          ${Array.from({length: state.peers.length + 1}, (_, i) => i + 1).map(pos =>
-            `<option value="${pos}" ${currentValue === pos ? 'selected' : ''}>${pos} місце</option>`
-          ).join('')}
-        </select>
-      `;
-
-      const select = peerRankField.querySelector('select');
-      select.addEventListener('change', (e) => {
-        if (!state.rankings[name].peerRankings) {
-          state.rankings[name].peerRankings = {};
-        }
-        const val = e.target.value;
-        state.rankings[name].peerRankings[peer.code] = val ? Number(val) : null;
-        triggerAutoSave();
-      });
-
-      peerRankSection.appendChild(peerRankField);
-    });
-
-    board.appendChild(peerRankSection);
+    // Grid 2: Peer rankings of me
+    const grid2 = createRankingGrid(name, state.peers, 'peer-ranking');
+    board.appendChild(grid2);
 
     // Optional comment
     const commentSection = document.createElement('div');
     commentSection.className = 'rank-comment';
     commentSection.innerHTML = `
-      <label>Додатковий коментар (опціонально):</label>
-      <textarea placeholder="Ваші думки щодо цього ранжування...">${state.rankings[name].comment || ''}</textarea>
+      <label>💬 Коментар (опціонально):</label>
+      <textarea placeholder="Ваші думки щодо цього критерію...">${state.rankings[name].comment || ''}</textarea>
     `;
 
     const commentInput = commentSection.querySelector('textarea');
@@ -333,43 +312,137 @@ function renderBoards(criteria) {
   });
 }
 
-function createDraggable(code) {
-  const peer = state.peers.find(p => p.code === code);
-  const li = document.createElement('li');
-  li.className = 'draggable';
-  li.draggable = true;
-  li.dataset.code = code;
-  li.innerHTML = `<span>${peer ? peer.name : code}</span><span class="chip">тягни</span>`;
-  return li;
+function createRankingGrid(criteria, peers, type) {
+  const gridContainer = document.createElement('div');
+  gridContainer.className = 'ranking-grid-container';
+
+  const positions = peers.length + 1; // Number of positions
+
+  // Create table
+  const table = document.createElement('table');
+  table.className = 'ranking-grid';
+  table.dataset.criteria = criteria;
+  table.dataset.type = type;
+
+  // Header row
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.innerHTML = '<th></th>'; // Empty corner cell
+  for (let pos = 1; pos <= positions; pos++) {
+    headerRow.innerHTML += `<th><div class="position-label">${pos}</div></th>`;
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows
+  const tbody = document.createElement('tbody');
+  peers.forEach(peer => {
+    const row = document.createElement('tr');
+    row.dataset.peer = peer.code;
+
+    // Row header with peer name
+    const nameCell = document.createElement('th');
+    nameCell.className = 'peer-name-cell';
+    nameCell.innerHTML = `<div class="peer-name">${peer.name}</div>`;
+    row.appendChild(nameCell);
+
+    // Position cells
+    for (let pos = 1; pos <= positions; pos++) {
+      const cell = document.createElement('td');
+      cell.className = 'grid-cell';
+      cell.dataset.peer = peer.code;
+      cell.dataset.position = pos;
+
+      // Check if this cell should be selected
+      const isSelected = isCellSelected(criteria, peer.code, pos, type);
+      if (isSelected) {
+        cell.classList.add('selected');
+      }
+
+      // Click handler
+      cell.addEventListener('click', () => {
+        handleCellClick(criteria, peer.code, pos, type, cell);
+      });
+
+      row.appendChild(cell);
+    }
+
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+
+  gridContainer.appendChild(table);
+  return gridContainer;
 }
 
-function enableDrag(list) {
-  let dragged;
-
-  list.addEventListener('dragstart', (e) => {
-    dragged = e.target;
-    dragged.classList.add('dragging');
-  });
-
-  list.addEventListener('dragend', () => dragged?.classList.remove('dragging'));
-
-  list.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const target = e.target.closest('.draggable');
-    if (!target || target === dragged) return;
-
-    const rect = target.getBoundingClientRect();
-    const next = (e.clientY - rect.top) / rect.height > 0.5;
-    list.insertBefore(dragged, next ? target.nextSibling : target);
-    syncOrderFromDOM(list);
-  });
+function isCellSelected(criteria, peerCode, position, type) {
+  if (type === 'my-ranking') {
+    // Check if this peer is at this position in my ranking
+    const order = state.rankings[criteria].order || [];
+    return order[position - 1] === peerCode;
+  } else {
+    // Check if this peer thinks I'm at this position
+    const peerRankings = state.rankings[criteria].peerRankings || {};
+    return peerRankings[peerCode] === position;
+  }
 }
 
-function syncOrderFromDOM(list) {
-  const criteria = list.dataset.criteria;
-  const codes = Array.from(list.querySelectorAll('.draggable')).map(el => el.dataset.code);
-  state.rankings[criteria].order = codes;
+function handleCellClick(criteria, peerCode, position, type, cell) {
+  if (type === 'my-ranking') {
+    // MY ranking: only one selection per row (per peer)
+    const order = state.rankings[criteria].order || [];
+
+    // Remove this peer from current position if exists
+    const currentIndex = order.indexOf(peerCode);
+    if (currentIndex !== -1) {
+      order.splice(currentIndex, 1);
+    }
+
+    // If clicking already selected cell, just deselect (already removed above)
+    if (!cell.classList.contains('selected')) {
+      // Insert peer at new position
+      order.splice(position - 1, 0, peerCode);
+    }
+
+    state.rankings[criteria].order = order;
+  } else {
+    // PEER ranking of me: multiple selections allowed
+    if (!state.rankings[criteria].peerRankings) {
+      state.rankings[criteria].peerRankings = {};
+    }
+
+    if (cell.classList.contains('selected')) {
+      // Deselect
+      delete state.rankings[criteria].peerRankings[peerCode];
+    } else {
+      // Select
+      state.rankings[criteria].peerRankings[peerCode] = position;
+    }
+  }
+
+  // Re-render the grid
   triggerAutoSave();
+  const board = cell.closest('.board');
+  const criteriaName = criteria;
+  refreshGrid(board, criteriaName, type);
+}
+
+function refreshGrid(board, criteria, type) {
+  const table = board.querySelector(`table[data-criteria="${criteria}"][data-type="${type}"]`);
+  if (!table) return;
+
+  // Update all cells
+  table.querySelectorAll('.grid-cell').forEach(cell => {
+    const peerCode = cell.dataset.peer;
+    const position = Number(cell.dataset.position);
+    const isSelected = isCellSelected(criteria, peerCode, position, type);
+
+    if (isSelected) {
+      cell.classList.add('selected');
+    } else {
+      cell.classList.remove('selected');
+    }
+  });
 }
 
 // Submit Response

@@ -326,96 +326,153 @@ input[type="range"] {
 
 .boards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 24px;
 }
 
 .board {
   border: 1px solid var(--stroke);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 20px;
   background: #0c0f15;
 }
 
 .board h4 {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--accent);
 }
-
-.draggable-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.draggable {
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  padding: 10px;
-  background: rgba(255,255,255,0.04);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  cursor: grab;
-  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
-}
-
-.draggable:hover { border-color: var(--accent); }
-.draggable.dragging { opacity: 0.8; transform: rotate(-1deg) scale(1.01); }
 
 .board-instruction {
   font-size: 13px;
   color: var(--muted);
-  margin: 8px 0;
-  line-height: 1.5;
+  margin: 8px 0 12px;
+  line-height: 1.6;
 }
 
-.peer-rankings {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--stroke);
-  display: grid;
-  gap: 10px;
+/* Ranking Grid - Морський бій style */
+.ranking-grid-container {
+  overflow-x: auto;
+  margin: 12px 0;
 }
 
-.peer-rank-field {
-  display: grid;
-  grid-template-columns: 1fr 140px;
-  gap: 12px;
-  align-items: center;
+.ranking-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ranking-grid thead th {
+  background: rgba(91,255,179,0.08);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 2px solid var(--stroke);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ranking-grid thead th:first-child {
+  background: rgba(0,0,0,0.4);
+  border-right: 2px solid var(--stroke);
+  width: 140px;
+  min-width: 140px;
+}
+
+.position-label {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px;
+}
+
+.peer-name-cell {
+  background: rgba(91,255,179,0.05);
+  border-right: 2px solid var(--stroke);
+  padding: 12px;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.peer-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.grid-cell {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  border: 1px solid var(--stroke);
   background: rgba(255,255,255,0.02);
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--stroke);
-}
-
-.peer-rank-field label {
-  font-size: 14px;
-  color: var(--text);
-  margin: 0;
-}
-
-.peer-rank-field select {
-  background: var(--card);
-  border: 1px solid var(--stroke);
-  color: var(--text);
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 14px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.15s ease;
+  position: relative;
 }
 
-.peer-rank-field select:hover {
+.grid-cell:hover {
+  background: rgba(91,255,179,0.1);
   border-color: var(--accent);
+  transform: scale(1.05);
+  z-index: 2;
 }
 
-.peer-rank-field select:focus {
-  outline: none;
+.grid-cell.selected {
+  background: var(--accent);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(91,255,179,0.1);
+  box-shadow: 0 0 12px rgba(91,255,179,0.4);
+  animation: cellSelect 0.3s ease;
+}
+
+.grid-cell.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 700;
+  color: #0e0e10;
+}
+
+@keyframes cellSelect {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive grid */
+@media (max-width: 768px) {
+  .grid-cell {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .peer-name-cell {
+    width: 100px;
+    min-width: 100px;
+  }
+
+  .grid-cell.selected::after {
+    font-size: 18px;
+  }
 }
 
 .rank-comment {
