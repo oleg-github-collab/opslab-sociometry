@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -36,7 +37,11 @@ type sessionUser struct {
 }
 
 func New(store *store.Store, authManager *auth.Manager, participants []models.Participant) *Server {
-	handler := http.FileServerFS(web.Static)
+	staticSub, err := fs.Sub(web.Static, "static")
+	if err != nil {
+		log.Fatal("failed to get static subdir:", err)
+	}
+	handler := http.FileServerFS(staticSub)
 	participantBy := make(map[string]models.Participant)
 	for _, p := range participants {
 		participantBy[p.Code] = p
