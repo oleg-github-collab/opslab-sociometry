@@ -168,7 +168,7 @@ func (s *Server) handleQuestions(w http.ResponseWriter, r *http.Request) {
 		"peer":                peerQuestions,
 		"rankableParticipants": peers,
 		"criteria": []string{
-			"Власність та відповідальність",
+			"Ініціативність та відповідальність",
 			"Лідерство та вплив",
 			"Розвиток бізнесу OPSLAB",
 		},
@@ -435,7 +435,7 @@ func buildSyntheticRankings(peers []models.Participant) []models.RankingPayload 
 	}
 	rankings := []models.RankingPayload{
 		{
-			Criteria: "Власність та відповідальність",
+			Criteria: "Ініціативність та відповідальність",
 			Order:    codes,
 			SelfRank: 2,
 			Comment:  "Тестове ранжування для перевірки.",

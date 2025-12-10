@@ -131,6 +131,18 @@ h1,h2,h3 {
 .lead {
   color: var(--muted);
   margin: 0;
+  line-height: 1.6;
+}
+
+.instructions {
+  color: var(--muted);
+  margin: 12px 0 0;
+  line-height: 1.7;
+  font-size: 14px;
+  background: rgba(91,255,179,0.04);
+  padding: 14px 16px;
+  border-radius: 12px;
+  border-left: 3px solid var(--accent);
 }
 
 .badge {
@@ -353,10 +365,70 @@ input[type="range"] {
 .draggable:hover { border-color: var(--accent); }
 .draggable.dragging { opacity: 0.8; transform: rotate(-1deg) scale(1.01); }
 
-.self-rank {
-  margin-top: 10px;
+.board-instruction {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.peer-rankings {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stroke);
+  display: grid;
+  gap: 10px;
+}
+
+.peer-rank-field {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255,255,255,0.02);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+}
+
+.peer-rank-field label {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0;
+}
+
+.peer-rank-field select {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.peer-rank-field select:hover {
+  border-color: var(--accent);
+}
+
+.peer-rank-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91,255,179,0.1);
+}
+
+.rank-comment {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--stroke);
   display: grid;
   gap: 6px;
+}
+
+.rank-comment label {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .actions {

@@ -32,10 +32,11 @@ type AnswerPayload struct {
 
 // RankingPayload collects drag-and-drop rankings per criterion.
 type RankingPayload struct {
-	Criteria string   `json:"criteria"`
-	Order    []string `json:"order"`
-	SelfRank int      `json:"selfRank"`
-	Comment  string   `json:"comment,omitempty"`
+	Criteria     string         `json:"criteria"`
+	Order        []string       `json:"order"`        // My ranking of colleagues (drag & drop result)
+	SelfRank     int            `json:"selfRank"`     // DEPRECATED: Where I would place myself
+	PeerRankings map[string]int `json:"peerRankings"` // Where each colleague would place me: {"1122": 3, "1425": 1, ...}
+	Comment      string         `json:"comment,omitempty"`
 }
 
 // ResponseRecord represents a stored submission.

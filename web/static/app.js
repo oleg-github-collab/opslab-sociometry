@@ -7,6 +7,41 @@ const state = {
   rankings: {},
 };
 
+// Auto-save to localStorage
+function saveStateToLocal() {
+  if (!state.me) return;
+  const key = `survey_state_${state.me.code}`;
+  localStorage.setItem(key, JSON.stringify({
+    answers: state.answers,
+    rankings: state.rankings,
+    timestamp: new Date().toISOString()
+  }));
+  console.log('Автозбереження виконано:', new Date().toLocaleTimeString());
+}
+
+function loadStateFromLocal() {
+  if (!state.me) return;
+  const key = `survey_state_${state.me.code}`;
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      state.answers = data.answers || {};
+      state.rankings = data.rankings || {};
+      console.log('Відновлено дані з автозбереження:', data.timestamp);
+    } catch (e) {
+      console.error('Помилка відновлення даних:', e);
+    }
+  }
+}
+
+// Debounce helper for auto-save
+let autoSaveTimeout;
+function triggerAutoSave() {
+  clearTimeout(autoSaveTimeout);
+  autoSaveTimeout = setTimeout(saveStateToLocal, 500);
+}
+
 // DOM selectors
 const $ = (id) => document.getElementById(id);
 
@@ -105,9 +140,13 @@ async function loadQuestions() {
     state.rankings[c] = {
       order: state.peers.map(p => p.code),
       selfRank: Math.min(2, state.peers.length + 1),
+      peerRankings: {},
       comment: '',
     };
   });
+
+  // Restore from localStorage if exists
+  loadStateFromLocal();
 
   renderCommon(data.common);
   renderPeers(data.peer);
@@ -177,12 +216,18 @@ function createQuestion(q) {
   if (q.type === 'text') {
     const textarea = document.createElement('textarea');
     textarea.placeholder = 'Коротко, але конкретно';
-    textarea.addEventListener('input', (e) => state.answers[q.id] = e.target.value);
+    textarea.addEventListener('input', (e) => {
+      state.answers[q.id] = e.target.value;
+      triggerAutoSave();
+    });
     field.appendChild(textarea);
   } else if (q.type === 'choice') {
     const select = document.createElement('select');
     select.innerHTML = `<option value="">Обрати</option>` + q.choice.map(c => `<option value="${c}">${c}</option>`).join('');
-    select.addEventListener('change', (e) => state.answers[q.id] = e.target.value);
+    select.addEventListener('change', (e) => {
+      state.answers[q.id] = e.target.value;
+      triggerAutoSave();
+    });
     field.appendChild(select);
   } else if (q.type === 'scale') {
     const rangeWrap = document.createElement('div');
@@ -202,6 +247,7 @@ function createQuestion(q) {
     range.addEventListener('input', (e) => {
       label.textContent = `Оцінка: ${e.target.value}/${q.scaleMax || 10}`;
       state.answers[q.id] = Number(e.target.value);
+      triggerAutoSave();
     });
 
     rangeWrap.append(range, label);
@@ -220,7 +266,7 @@ function renderBoards(criteria) {
   criteria.forEach(name => {
     const board = document.createElement('div');
     board.className = 'board';
-    board.innerHTML = `<h4>${name}</h4>`;
+    board.innerHTML = `<h4>${name}</h4><p class="board-instruction">✋ <strong>Крок 1:</strong> Перетягніть карточки у порядку від найсильнішого до найслабшого</p>`;
 
     const list = document.createElement('ul');
     list.className = 'draggable-list';
@@ -234,26 +280,55 @@ function renderBoards(criteria) {
     enableDrag(list);
     board.appendChild(list);
 
-    const selfRank = document.createElement('div');
-    selfRank.className = 'self-rank';
-    selfRank.innerHTML = `
-      <label>Куди ви поставили б себе за цим критерієм?</label>
-      <input type="number" min="1" max="${state.peers.length + 1}" value="${state.rankings[name].selfRank}" />
-      <textarea placeholder="Контекст про своє місце (опціонально)">${state.rankings[name].comment || ''}</textarea>
+    // Peer Rankings Section
+    const peerRankSection = document.createElement('div');
+    peerRankSection.className = 'peer-rankings';
+    peerRankSection.innerHTML = `<p class="board-instruction">👤 <strong>Крок 2:</strong> Вкажіть, на яке місце <u>кожен колега поставив би вас</u> (за вашою думкою):</p>`;
+
+    state.peers.forEach(peer => {
+      const peerRankField = document.createElement('div');
+      peerRankField.className = 'peer-rank-field';
+      const currentValue = state.rankings[name].peerRankings?.[peer.code];
+      peerRankField.innerHTML = `
+        <label>${peer.name}</label>
+        <select data-peer="${peer.code}">
+          <option value="">Оберіть місце...</option>
+          ${Array.from({length: state.peers.length + 1}, (_, i) => i + 1).map(pos =>
+            `<option value="${pos}" ${currentValue === pos ? 'selected' : ''}>${pos} місце</option>`
+          ).join('')}
+        </select>
+      `;
+
+      const select = peerRankField.querySelector('select');
+      select.addEventListener('change', (e) => {
+        if (!state.rankings[name].peerRankings) {
+          state.rankings[name].peerRankings = {};
+        }
+        const val = e.target.value;
+        state.rankings[name].peerRankings[peer.code] = val ? Number(val) : null;
+        triggerAutoSave();
+      });
+
+      peerRankSection.appendChild(peerRankField);
+    });
+
+    board.appendChild(peerRankSection);
+
+    // Optional comment
+    const commentSection = document.createElement('div');
+    commentSection.className = 'rank-comment';
+    commentSection.innerHTML = `
+      <label>Додатковий коментар (опціонально):</label>
+      <textarea placeholder="Ваші думки щодо цього ранжування...">${state.rankings[name].comment || ''}</textarea>
     `;
 
-    const numberInput = selfRank.querySelector('input');
-    const commentInput = selfRank.querySelector('textarea');
-
-    numberInput.addEventListener('input', (e) => {
-      state.rankings[name].selfRank = Number(e.target.value);
-    });
-
+    const commentInput = commentSection.querySelector('textarea');
     commentInput.addEventListener('input', (e) => {
       state.rankings[name].comment = e.target.value;
+      triggerAutoSave();
     });
 
-    board.appendChild(selfRank);
+    board.appendChild(commentSection);
     $('rankingBoards').appendChild(board);
   });
 }
@@ -294,6 +369,7 @@ function syncOrderFromDOM(list) {
   const criteria = list.dataset.criteria;
   const codes = Array.from(list.querySelectorAll('.draggable')).map(el => el.dataset.code);
   state.rankings[criteria].order = codes;
+  triggerAutoSave();
 }
 
 // Submit Response
@@ -307,6 +383,7 @@ async function handleSubmit() {
         criteria,
         order: data.order,
         selfRank: Number(data.selfRank) || 0,
+        peerRankings: data.peerRankings || {},
         comment: data.comment || '',
       })),
     };
