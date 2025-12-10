@@ -259,6 +259,16 @@ function createQuestion(q) {
   return wrap;
 }
 
+// Criteria descriptions
+function getCriteriaDescription(criteriaName) {
+  const descriptions = {
+    "Ініціативність та відповідальність": "Хто найчастіше бере на себе відповідальність за результат, проявляє ініціативу без додаткових запитів, і доводить справи до кінця?",
+    "Лідерство": "Хто найкраще веде команду за собою, надихає інших, приймає складні рішення і бере на себе роль координатора в критичних ситуаціях?",
+    "Розвиток бізнесу OPSLAB": "Хто робить найбільший внесок у розвиток бізнесу компанії, генерує ідеї для зростання, залучає клієнтів або покращує процеси?"
+  };
+  return descriptions[criteriaName] || "";
+}
+
 // Ranking Boards - Grid-based "Морський бій" style
 function renderBoards(criteria) {
   $('rankingBoards').innerHTML = '';
@@ -267,15 +277,24 @@ function renderBoards(criteria) {
     const board = document.createElement('div');
     board.className = 'board';
 
-    // Header
+    // Header with criteria description
     const header = document.createElement('h4');
     header.textContent = name;
     board.appendChild(header);
 
+    // Criteria description
+    const description = getCriteriaDescription(name);
+    if (description) {
+      const descEl = document.createElement('p');
+      descEl.className = 'criteria-description';
+      descEl.textContent = description;
+      board.appendChild(descEl);
+    }
+
     // Instruction for MY ranking
     const instr1 = document.createElement('p');
     instr1.className = 'board-instruction';
-    instr1.innerHTML = `<strong>📊 Крок 1:</strong> Проранжуйте колег (натисніть на клітинку). Один колега = одне місце.`;
+    instr1.innerHTML = `<strong>📊 Крок 1:</strong> Проранжуйте колег від найсильнішого (1) до найслабшого (${state.peers.length}). Натисніть на клітинку.`;
     board.appendChild(instr1);
 
     // Grid 1: My ranking of colleagues
@@ -316,7 +335,7 @@ function createRankingGrid(criteria, peers, type) {
   const gridContainer = document.createElement('div');
   gridContainer.className = 'ranking-grid-container';
 
-  const positions = peers.length + 1; // Number of positions
+  const positions = peers.length; // Number of positions (excluding self)
 
   // Create table
   const table = document.createElement('table');
