@@ -328,6 +328,8 @@ async function loadAdminData() {
       api('/api/admin/responses')
     ]);
 
+    console.log('Admin data loaded:', { stats, responses });
+
     // Update stats
     $('statCompleted').textContent = stats.completed;
     $('statPending').textContent = stats.pending;
@@ -357,15 +359,20 @@ async function loadAdminData() {
             </div>
           </div>
         `).join('')
-      : '<div class="hint">Немає відповідей</div>';
+      : '<div class="hint">Немає відповідей. Натисніть "🧪 Заповнити тестовими" щоб створити дані для перегляду.</div>';
+
+    console.log('Responses rendered:', responses.length);
   } catch (err) {
     console.error('Failed to load admin data:', err);
+    $('responsesList').innerHTML = '<div class="hint error">❌ Помилка завантаження даних</div>';
   }
 }
 
 async function viewResponseDetail(code) {
+  console.log('Opening response detail for:', code);
   try {
     const detail = await api(`/api/admin/response/${code}`);
+    console.log('Response detail loaded:', detail);
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
