@@ -67,7 +67,7 @@ func (s *Server) Routes() http.Handler {
 	// Admin
 	mux.Handle("/api/admin/stats", s.adminOnly(s.handleStats))
 	mux.Handle("/api/admin/responses", s.adminOnly(s.handleAdminResponses))
-	mux.HandleFunc("/api/admin/response/", s.adminOnly(s.handleAdminResponseDetail))
+	mux.Handle("/api/admin/response/", s.adminOnly(s.handleAdminResponseDetail))
 	mux.Handle("/api/admin/export", s.adminOnly(s.handleExport))
 	mux.Handle("/api/admin/run-test", s.adminOnly(s.handleRunTestData))
 	mux.Handle("/api/admin/reset", s.adminOnly(s.handleReset))
