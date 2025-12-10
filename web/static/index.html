@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPSLAB — Соціометрія</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div id="noise"></div>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="brand-name">OPSLAB Скан</div>
+          <div class="brand-sub">Власність • Лідерство • Бізнес</div>
+        </div>
+      </div>
+      <div class="session" id="sessionBadge">
+        <span class="pill">не авторизовано</span>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card highlight" id="loginCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Вхід за емейлом та кодом</p>
+            <h1>Командна соціометрія</h1>
+            <p class="lead">20% спільних питань + індивідуальні формулювання на ті самі теми, drag & drop ранжування по 3 критеріях і суб'єктивне місце для себе.</p>
+          </div>
+          <div class="badge pulse">Фокус: якість даних</div>
+        </div>
+        <form id="loginForm" class="form">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" placeholder="you@opslab.uk" required />
+          </label>
+          <label class="field">
+            <span>Персональний код</span>
+            <input type="text" name="code" placeholder="----" required />
+          </label>
+          <button type="submit" class="btn primary">Увійти</button>
+          <p class="hint">Доступ тільки за заданими емейлами та кодами. Адмін: work.olegkaminskyi@gmail.com / 0000.</p>
+          <div id="loginError" class="error hidden"></div>
+        </form>
+      </section>
+
+      <section class="card hidden" id="surveyCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">1. Спільний блок (20%)</p>
+            <h2>Командний зріз</h2>
+          </div>
+          <div class="pill soft" id="meBadge"></div>
+        </div>
+        <div id="commonQuestions" class="questions"></div>
+      </section>
+
+      <section class="card hidden" id="peerCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">2. Колеги (варіативні формулювання)</p>
+            <h2>Глибокий фідбек</h2>
+          </div>
+          <div class="pill soft">Не включає себе та адміна</div>
+        </div>
+        <div id="peerQuestions" class="accordion"></div>
+      </section>
+
+      <section class="card hidden" id="rankingCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">3. Drag & Drop ранжування</p>
+            <h2>Трек якісної суб'єктивності</h2>
+          </div>
+          <div class="pill soft">Можна тягнути, міняти місця, задати свій слот</div>
+        </div>
+        <div id="rankingBoards" class="boards"></div>
+      </section>
+
+      <section class="card hidden" id="actionsCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Фінал</p>
+            <h2>Зберегти відповіді</h2>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="submitBtn" class="btn primary large">Зберегти анкету</button>
+          <button id="logoutBtn" class="btn ghost">Вийти</button>
+          <div id="saveStatus" class="hint"></div>
+        </div>
+      </section>
+
+      <section class="card admin hidden" id="adminCard">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Адмін-панель</p>
+            <h2>Експорт / тест / старт продакшн</h2>
+          </div>
+          <div class="pill strong">Для work.olegkaminskyi@gmail.com</div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn ghost" id="exportBtn">Експорт JSON</button>
+          <button class="btn ghost" id="testDataBtn">Заповнити тестовими</button>
+          <button class="btn danger" id="resetBtn">Очистити й запустити продакшн</button>
+          <div class="hint">Після перевірки тестового заповнення натисніть «Очистити». Дані миттєво готові до аналізу.</div>
+          <div id="adminStatus" class="hint"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>
