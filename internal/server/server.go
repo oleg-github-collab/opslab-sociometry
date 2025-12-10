@@ -67,6 +67,7 @@ func (s *Server) Routes() http.Handler {
 	// Admin
 	mux.Handle("/api/admin/stats", s.adminOnly(s.handleStats))
 	mux.Handle("/api/admin/responses", s.adminOnly(s.handleAdminResponses))
+	mux.HandleFunc("/api/admin/response/", s.adminOnly(s.handleAdminResponseDetail))
 	mux.Handle("/api/admin/export", s.adminOnly(s.handleExport))
 	mux.Handle("/api/admin/run-test", s.adminOnly(s.handleRunTestData))
 	mux.Handle("/api/admin/reset", s.adminOnly(s.handleReset))
@@ -305,6 +306,53 @@ func (s *Server) handleAdminResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, enriched)
+}
+
+func (s *Server) handleAdminResponseDetail(w http.ResponseWriter, r *http.Request) {
+	// Extract participant code from URL path
+	code := strings.TrimPrefix(r.URL.Path, "/api/admin/response/")
+	if code == "" {
+		http.Error(w, "participant code required", http.StatusBadRequest)
+		return
+	}
+
+	responses, err := s.store.AllResponses(r.Context())
+	if err != nil {
+		log.Println("admin response detail:", err)
+		http.Error(w, "cannot load response", http.StatusInternalServerError)
+		return
+	}
+
+	// Find response for this participant
+	var targetResp *models.ResponseRecord
+	for _, resp := range responses {
+		if resp.ParticipantCode == code {
+			targetResp = &resp
+			break
+		}
+	}
+
+	if targetResp == nil {
+		http.Error(w, "response not found", http.StatusNotFound)
+		return
+	}
+
+	// Enrich with participant info
+	p, ok := s.participantBy[code]
+	payload := map[string]interface{}{
+		"participantCode": targetResp.ParticipantCode,
+		"participantName": "Unknown",
+		"answers":         targetResp.Answers,
+		"rankings":        targetResp.Rankings,
+		"submittedAt":     targetResp.SubmittedAt,
+		"isTestData":      targetResp.IsTestData,
+	}
+	if ok {
+		payload["participantName"] = p.Name
+		payload["participantEmail"] = p.Email
+	}
+
+	writeJSON(w, payload)
 }
 
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {

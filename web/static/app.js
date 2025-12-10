@@ -33,6 +33,8 @@ const selectors = {
   completedList: document.getElementById('completedList'),
   pendingList: document.getElementById('pendingList'),
   responsesList: document.getElementById('responsesList'),
+  refreshAdminBtn: document.getElementById('refreshAdminBtn'),
+  adminLogoutBtn: document.getElementById('adminLogoutBtn'),
 };
 
 async function api(path, options = {}) {
@@ -381,7 +383,7 @@ async function loadAdminData() {
       ? stats.pendingList.map(p => `<div class="participant-item">⏳ ${p.name} — ${p.email}</div>`).join('')
       : '<div class="hint">Всі заповнили!</div>';
 
-    // Responses list
+    // Responses list with view details button
     selectors.responsesList.innerHTML = responses.length > 0
       ? responses.map(r => `
           <div class="response-item">
@@ -392,6 +394,7 @@ async function loadAdminData() {
             <div class="response-meta">
               ${r.answersCount} відповідей, ${r.rankingsCount} ранжувань
               ${r.isTestData ? '<span class="badge">ТЕСТ</span>' : ''}
+              <button class="btn-link" onclick="viewResponseDetail('${r.participantCode}')">👁 Переглянути</button>
             </div>
           </div>
         `).join('')
@@ -400,5 +403,74 @@ async function loadAdminData() {
     console.error('Failed to load admin data:', err);
   }
 }
+
+async function viewResponseDetail(code) {
+  try {
+    const detail = await api(`/api/admin/response/${code}`);
+
+    let detailHTML = `
+      <div class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h2>${detail.participantName}</h2>
+            <button class="btn-close" onclick="closeModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="hint">${detail.participantEmail || ''} • ${new Date(detail.submittedAt).toLocaleString('uk-UA')} ${detail.isTestData ? '• ТЕСТ' : ''}</p>
+
+            <h3>Відповіді (${detail.answers.length})</h3>
+            <div class="answers-list">
+              ${detail.answers.map(a => `
+                <div class="answer-item">
+                  <div class="answer-question">${a.questionId}</div>
+                  <div class="answer-value">${formatAnswerValue(a.value)}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <h3>Ранжування (${detail.rankings.length})</h3>
+            <div class="rankings-list">
+              ${detail.rankings.map(r => `
+                <div class="ranking-item">
+                  <strong>${r.criteria}</strong>
+                  <div>Порядок: ${r.order.join(', ')}</div>
+                  <div>Себе на місці: ${r.selfRank}</div>
+                  ${r.comment ? `<div class="hint">${r.comment}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', detailHTML);
+  } catch (err) {
+    alert('Помилка завантаження деталей: ' + err.message);
+  }
+}
+
+function formatAnswerValue(value) {
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value;
+}
+
+function closeModal() {
+  const modal = document.querySelector('.modal-overlay');
+  if (modal) modal.remove();
+}
+
+// Admin buttons
+selectors.refreshAdminBtn?.addEventListener('click', async () => {
+  selectors.adminStatus.textContent = 'Оновлення...';
+  await loadAdminData();
+  selectors.adminStatus.textContent = 'Дані оновлено ✓';
+  setTimeout(() => selectors.adminStatus.textContent = '', 2000);
+});
+
+selectors.adminLogoutBtn?.addEventListener('click', async () => {
+  await api('/api/logout');
+  window.location.reload();
+});
 
 fetchSession();
